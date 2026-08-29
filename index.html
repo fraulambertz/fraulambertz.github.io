@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kinder-Tools</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 30px;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    main {
+      max-width: 900px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+    }
+
+    .tools {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .tool {
+      display: block;
+      padding: 30px 20px;
+      background: white;
+      border-radius: 20px;
+      text-decoration: none;
+      color: #111827;
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      box-shadow: 0 8px 20px rgba(0,0,0,.1);
+    }
+
+    .tool:hover {
+      transform: translateY(-3px);
+    }
+  </style>
+</head>
+
+<body>
+
+<main>
+  <h1>🧰 Kinder-Tools</h1>
+
+  <div class="tools">
+
+    <a class="tool" href="./morse/">
+      🔦<br>
+      Morse-Lampe
+    </a>
+
+    <a class="tool" href="./stopwatch/">
+      ⏱️<br>
+      Stoppuhr
+    </a>
+
+    <a class="tool" href="./dice/">
+      🎲<br>
+      Würfel
+    </a>
+
+  </div>
+</main>
+
+</body>
+</html>
