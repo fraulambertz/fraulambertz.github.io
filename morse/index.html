@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Morse-Lampe mit Morsealphabet</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --panel: #ffffff;
+      --text: #111827;
+      --muted: #4b5563;
+      --lamp-off: #94a3b8;
+      --lamp-on: #fde047;
+      --button: #2563eb;
+      --button-active: #1d4ed8;
+      --line: #d1d5db;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      min-height: 100%;
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      padding: 16px;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .app {
+      width: min(1280px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(320px, 0.95fr) minmax(520px, 1.15fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .lamp-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 720px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      line-height: 1.05;
+      text-align: center;
+    }
+
+    .subtitle {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      text-align: center;
+      max-width: 24rem;
+    }
+
+    .lamp-wrap {
+      display: grid;
+      place-items: center;
+      margin: 12px 0 26px;
+      min-height: 250px;
+    }
+
+    .lamp {
+      width: min(220px, 55vw);
+      aspect-ratio: 1;
+      border-radius: 999px;
+      background: radial-gradient(circle at 35% 28%, #ffffff 0 8%, var(--lamp-off) 38%, #475569 100%);
+      border: 12px solid #334155;
+      box-shadow:
+        inset 0 0 22px rgba(255,255,255,0.24),
+        0 18px 28px rgba(0,0,0,0.18);
+      transition: background 80ms linear, box-shadow 80ms linear, transform 80ms linear;
+    }
+
+    body.light-on .lamp {
+      background: radial-gradient(circle at 35% 28%, #fffef5 0 12%, var(--lamp-on) 48%, #f59e0b 100%);
+      box-shadow:
+        0 0 30px rgba(253, 224, 71, 0.85),
+        0 0 95px rgba(250, 204, 21, 0.42),
+        0 12px 28px rgba(0,0,0,0.16);
+      transform: scale(1.03);
+    }
+
+    .press-button {
+      width: min(100%, 320px);
+      min-height: 92px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #3b82f6, var(--button));
+      color: white;
+      font-size: clamp(1.35rem, 4vw, 2rem);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      box-shadow: 0 10px 0 #1e3a8a, 0 20px 32px rgba(0, 0, 0, 0.18);
+      transform: translateY(0);
+      transition: transform 60ms linear, box-shadow 60ms linear, background 60ms linear;
+    }
+
+    .press-button:active,
+    body.light-on .press-button {
+      background: linear-gradient(180deg, #2563eb, var(--button-active));
+      box-shadow: 0 4px 0 #1e3a8a, 0 10px 18px rgba(0,0,0,0.16);
+      transform: translateY(6px);
+    }
+
+    .press-button:focus-visible {
+      outline: 4px solid #f59e0b;
+      outline-offset: 5px;
+    }
+
+    .hint {
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+      text-align: center;
+    }
+
+    .alphabet-panel {
+      min-height: 720px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .alphabet-title {
+      margin: 0 0 18px;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      line-height: 1.1;
+    }
+
+    .alphabet-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px 34px;
+      align-content: start;
+    }
+
+    .morse-list {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .morse-row {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      align-items: center;
+      gap: 10px;
+      min-height: 24px;
+    }
+
+    .char {
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    .morse-code {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 20px;
+      flex-wrap: nowrap;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #111111;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .dash {
+      width: 32px;
+      height: 10px;
+      border-radius: 1px;
+      background: #111111;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .lamp-panel,
+      .alphabet-panel {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .alphabet-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main class="panel lamp-panel" aria-labelledby="title">
+      <h1 id="title">Morse-Lampe</h1>
+      <p class="subtitle">Drücke und halte den Knopf. Solange du drückst, leuchtet die Lampe.</p>
+
+      <div class="lamp-wrap" aria-hidden="true">
+        <div class="lamp"></div>
+      </div>
+
+      <button class="press-button" id="signalButton" type="button">
+        DRÜCKEN
+      </button>
+
+      <p class="hint">Die Lampe funktioniert nur mit dem Knopf.</p>
+      <p class="sr-only" aria-live="polite" id="status">Lampe aus</p>
+    </main>
+
+    <aside class="panel alphabet-panel" aria-labelledby="alphabet-title">
+      <h2 class="alphabet-title" id="alphabet-title">Morsealphabet</h2>
+      <div class="alphabet-grid" aria-label="Morsealphabet">
+        <div class="morse-list">
+          <div class="morse-row"><span class="char">A</span><span class="morse-code" aria-label=".-"><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">B</span><span class="morse-code" aria-label="-..."><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">C</span><span class="morse-code" aria-label="-.-."><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">D</span><span class="morse-code" aria-label="-.."><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">E</span><span class="morse-code" aria-label="."><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">F</span><span class="morse-code" aria-label="..-."><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">G</span><span class="morse-code" aria-label="--."><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">H</span><span class="morse-code" aria-label="...."><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">I</span><span class="morse-code" aria-label=".."><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">J</span><span class="morse-code" aria-label=".---"><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">K</span><span class="morse-code" aria-label="-.-"><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">L</span><span class="morse-code" aria-label=".-.."><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">M</span><span class="morse-code" aria-label="--"><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">N</span><span class="morse-code" aria-label="-."><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">O</span><span class="morse-code" aria-label="---"><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">P</span><span class="morse-code" aria-label=".--."><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">Q</span><span class="morse-code" aria-label="--.-"><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">R</span><span class="morse-code" aria-label=".-."><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">S</span><span class="morse-code" aria-label="..."><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">T</span><span class="morse-code" aria-label="-"><span class="dash" aria-hidden="true"></span></span></div>
+        </div>
+        <div class="morse-list">
+          <div class="morse-row"><span class="char">U</span><span class="morse-code" aria-label="..-"><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">V</span><span class="morse-code" aria-label="...-"><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">W</span><span class="morse-code" aria-label=".--"><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">X</span><span class="morse-code" aria-label="-..-"><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">Y</span><span class="morse-code" aria-label="-.--"><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">Z</span><span class="morse-code" aria-label="--.."><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">1</span><span class="morse-code" aria-label=".----"><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">2</span><span class="morse-code" aria-label="..---"><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">3</span><span class="morse-code" aria-label="...--"><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">4</span><span class="morse-code" aria-label="....-"><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">5</span><span class="morse-code" aria-label="....."><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">6</span><span class="morse-code" aria-label="-...."><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">7</span><span class="morse-code" aria-label="--..."><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">8</span><span class="morse-code" aria-label="---.."><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">9</span><span class="morse-code" aria-label="----."><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span></span></div>
+<div class="morse-row"><span class="char">0</span><span class="morse-code" aria-label="-----"><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span><span class="dash" aria-hidden="true"></span></span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const button = document.getElementById('signalButton');
+    const statusText = document.getElementById('status');
+
+    function turnOn(event) {
+      if (event) event.preventDefault();
+      document.body.classList.add('light-on');
+      button.setAttribute('aria-pressed', 'true');
+      statusText.textContent = 'Lampe an';
+    }
+
+    function turnOff(event) {
+      if (event) event.preventDefault();
+      document.body.classList.remove('light-on');
+      button.setAttribute('aria-pressed', 'false');
+      statusText.textContent = 'Lampe aus';
+    }
+
+    button.addEventListener('pointerdown', turnOn);
+    button.addEventListener('pointerup', turnOff);
+    button.addEventListener('pointercancel', turnOff);
+    button.addEventListener('pointerleave', turnOff);
+    button.addEventListener('contextmenu', event => event.preventDefault());
+  </script>
+</body>
+</html>
