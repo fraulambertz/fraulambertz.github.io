@@ -1,5 +1,5 @@
 # Windows download metadata (Mark of the Web)
-*:Zone.Identifier
+*Zone.Identifier*
 
 # Operating-system files
 .DS_Store
