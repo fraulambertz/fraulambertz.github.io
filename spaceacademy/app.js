@@ -1,9 +1,9 @@
 const $ = (selector) => document.querySelector(selector);
 const app = {
   home: $('#homeScreen'), game: $('#gameScreen'), result: $('#resultScreen'), field: $('#playfield'),
-  feedback: $('#feedback'), instruction: $('#instruction'), instructionIcon: $('#instructionIcon'), skill: $('#skillLabel'),
-  stepLabel: $('#stepLabel'), progress: $('#progressBar'), timer: $('#timer'), missionName: $('#missionName'),
-  howToText: $('#howToText'), howToSymbol: $('#howToSymbol')
+  feedback: $('#feedback'), instruction: $('#instruction'), instructionIcon: $('#instructionIcon'),
+  taskTitle: $('#taskTitle'), taskExplanation: $('#taskExplanation'), stepLabel: $('#stepLabel'),
+  progress: $('#progressBar'), timer: $('#timer'), missionName: $('#missionName')
 };
 
 let mode = null;
@@ -18,42 +18,42 @@ let taskFinished = false;
 let cleanups = [];
 let audioContext = null;
 let soundOn = localStorage.getItem('space-input-sound') !== 'off';
-let pausedTotal = 0;
-let pauseStarted = 0;
-let currentTask = null;
-let taskRendered = false;
 
 const taskSets = {
   mouse: [
-    { skill:'HOVER & TOOLTIP', icon:'◉', level:'BASIS', title:'Hover: ruhig verweilen', text:'Finde „Nebula“. Verweile auf den Planeten, bis ihr Tooltip erscheint.', how:'Bewege den Zeiger auf ein Objekt und lasse ihn dort ruhig stehen. Nach 0,8 Sekunden erscheint eine Zusatzinformation.', location:'Die Maus wird nur bewegt – keine Taste drücken.', render:()=>hoverTask(false) },
-    { skill:'HOVER & TOOLTIP', icon:'◉', level:'PROFI', title:'Hover unter Zeitdruck', text:'Enttarne zwei gesuchte Monde über ihre Tooltips.', how:'Verweile auf jedem Objekt, bis der Tooltip sichtbar ist. Klicke nur die gesuchten Monde an.', location:'Zeiger ruhig halten; ein Klick beendet die Auswahl.', render:()=>hoverTask(true) },
-    { skill:'LINKSKLICK', icon:'↖', level:'BASIS', title:'Einmal links klicken', text:'Aktiviere drei leuchtende Energiekugeln mit je einem Linksklick.', how:'Drücke die linke Maustaste einmal kurz und lasse sie direkt wieder los.', location:'Linke Maustaste: vorne links auf der Maus.', render:()=>clickTask(3,false) },
-    { skill:'LINKSKLICK', icon:'↖', level:'PROFI', title:'Bewegliche Ziele treffen', text:'Aktiviere fünf wandernde Energiekugeln mit Linksklicks.', how:'Ziele zuerst mit dem Zeiger und klicke dann einmal mit der linken Maustaste.', location:'Linke Maustaste: vorne links auf der Maus.', render:()=>clickTask(5,true) },
-    { skill:'DOPPELKLICK', icon:'↖↖', level:'BASIS', title:'Zweimal schnell klicken', text:'Öffne zwei Kristalle jeweils mit einem Doppelklick.', how:'Drücke die linke Maustaste zweimal schnell hintereinander, ohne die Maus dazwischen zu bewegen.', location:'Zweimal dieselbe linke Maustaste drücken.', render:()=>doubleClickTask(2,false) },
-    { skill:'DOPPELKLICK', icon:'↖↖', level:'PROFI', title:'Gezielte Doppelklicks', text:'Öffne drei kleinere Kristalle mit sauberen Doppelklicks.', how:'Beide Klicks müssen schnell auf demselben Objekt landen. Ein einzelner Klick öffnet nichts.', location:'Linke Maustaste: zweimal kurz hintereinander.', render:()=>doubleClickTask(3,true) },
-    { skill:'RECHTSKLICK', icon:'☰', level:'BASIS', title:'Aktionsmenü öffnen', text:'Öffne beim Alien das Menü per Rechtsklick und wähle „Begrüßen“.', how:'Drücke einmal die rechte Maustaste. Dadurch öffnet sich ein Menü mit Aktionen.', location:'Rechte Maustaste: vorne rechts auf der Maus.', render:()=>rightClickTask(false) },
-    { skill:'RECHTSKLICK', icon:'☰', level:'PROFI', title:'Passende Aktion finden', text:'Öffne die Menüs der beiden Aliens und wähle ihre gewünschte Aktion.', how:'Öffne jedes Aktionsmenü mit Rechtsklick und wähle danach den richtigen Eintrag mit Linksklick.', location:'Rechts öffnet das Menü, links wählt den Eintrag.', render:()=>rightClickTask(true) },
-    { skill:'GENAU KLICKEN', icon:'⊙', level:'BASIS', title:'Präzise zielen', text:'Triff drei kleine Navigationspunkte möglichst genau.', how:'Bewege die Zeigerspitze in die Mitte des Ziels und klicke einmal links.', location:'Die Spitze des Mauszeigers bestimmt den Treffpunkt.', render:()=>precisionTask(3,false) },
-    { skill:'GENAU KLICKEN', icon:'⊙', level:'PROFI', title:'Kleine Ziele treffen', text:'Triff fünf sehr kleine Navigationspunkte.', how:'Bremse die Maus kurz vor dem Ziel ab und klicke erst, wenn die Zeigerspitze sicher darin liegt.', location:'Mit kleinen Mausbewegungen lässt sich genauer zielen.', render:()=>precisionTask(5,true) },
-    { skill:'DRAG & DROP', icon:'↔', level:'BASIS', title:'Ziehen und ablegen', text:'Ziehe zwei Frachtkisten in die gleichfarbigen Landezonen.', how:'Linke Maustaste auf der Kiste gedrückt halten, Maus bewegen und erst im Ziel loslassen.', location:'Linke Maustaste während der gesamten Bewegung halten.', render:()=>dragTask(false) },
-    { skill:'DRAG & DROP', icon:'↔', level:'PROFI', title:'Fracht präzise sortieren', text:'Sortiere drei kleinere Kisten in die passenden Landezonen.', how:'Greife eine Kiste, halte die linke Taste und lege sie vollständig innerhalb der passenden Zone ab.', location:'Drücken – halten – bewegen – loslassen.', render:()=>dragTask(true) },
-    { skill:'SCROLLRAD', icon:'↕', level:'BASIS', title:'Nach unten scrollen', text:'Scrolle im Bordlogbuch bis zur grünen Abschlussmeldung.', how:'Bewege das Rad zwischen den Maustasten nach unten. Der Inhalt wandert, ohne dass du klicken musst.', location:'Das Scrollrad liegt zwischen linker und rechter Maustaste.', render:()=>scrollTask(false) },
-    { skill:'SCROLLRAD', icon:'↕', level:'PROFI', title:'Gezielt scrollen', text:'Finde im langen Sternenregister „Station VEGA“ und wähle sie aus.', how:'Scrolle mit dem Mausrad nach unten oder oben. Halte an, sobald die gesuchte Station sichtbar ist.', location:'Rad nach unten: Inhalt nach unten. Rad nach oben: zurück nach oben.', render:()=>scrollTask(true) },
-    { skill:'HEISSER DRAHT', icon:'⌁', level:'BASIS', title:'Ruhig durch den Korridor', text:'Klicke START, halte die Maustaste und führe den Impuls zum ZIEL.', how:'Im Startkreis drücken, die linke Taste halten und den Zeiger im leuchtenden Weg bewegen.', location:'Linke Maustaste erst im Ziel loslassen.', render:()=>wireTask(false) },
-    { skill:'HEISSER DRAHT', icon:'⌁', level:'PROFI', title:'Der schmale Korridor', text:'Führe den Impuls durch den schmaleren Energiekorridor.', how:'Halte die linke Taste gedrückt und bewege dich langsam durch die engeren Kurven.', location:'Kleine, ruhige Mausbewegungen helfen.', render:()=>wireTask(true) },
-    { skill:'ABSCHLUSSMISSION', icon:'★', level:'FINALE', title:'Alles in einer Mission', text:'Schließe den gemischten Maus-Parcours ab.', how:'Hover, Linksklick, Doppelklick, Rechtsklick, Präzision, Drag & Drop, Scrollrad und heißer Draht kommen nacheinander.', location:'Lies jeweils den kurzen Auftrag links oben im Spielfeld.', render:mixedMouseTask }
+    { skill:'HOVER', icon:'◉', level:'BASIS', title:'Hover', text:'Hovere über die drei Planeten und klicke den Planeten „Nebula“ an!', how:'Beim „Hovern“ hältst du die Maus still über einem Objekt. Oft werden dir dann zusätzliche Informationen angezeigt.', render:()=>hoverTask(false) },
+    { skill:'HOVER', icon:'◉', level:'PROFI', title:'Hover', text:'Hovere über die Monde und klicke nur Luna und Titan an!', how:'Beim „Hovern“ hältst du die Maus still über einem Objekt. Oft werden dir dann zusätzliche Informationen angezeigt.', render:()=>hoverTask(true) },
+    { skill:'LINKSKLICK', icon:'↖', level:'BASIS', title:'Linksklick', text:'Aktiviere alle Kugeln mit einem Linksklick!', how:'Wenn du etwas anklicken musst, machst du das mit der linken Maustaste. Halte die Maus still und klicke einmal kurz mit der linken Maustaste.', render:()=>clickTask(3,false) },
+    { skill:'LINKSKLICK', icon:'↖', level:'PROFI', title:'Linksklick', text:'Aktiviere alle bewegten Kugeln mit einem Linksklick!', how:'Wenn du etwas anklicken musst, machst du das mit der linken Maustaste. Halte die Maus still und klicke einmal kurz mit der linken Maustaste.', render:()=>clickTask(5,true) },
+    { skill:'DOPPELKLICK', icon:'↖↖', level:'BASIS', title:'Doppelklick', text:'Öffne die Kristall-Särge jeweils mit einem Doppelklick!', how:'Mit dem Doppelklick öffnest du einen Ordner oder eine Datei. Halte die Maus still und klicke zweimal schnell hintereinander mit der linken Maustaste.', render:()=>doubleClickTask(2,false) },
+    { skill:'DOPPELKLICK', icon:'↖↖', level:'PROFI', title:'Doppelklick', text:'Öffne die kleinen Kristall-Särge jeweils mit einem Doppelklick!', how:'Mit dem Doppelklick öffnest du einen Ordner oder eine Datei. Halte die Maus still und klicke zweimal schnell hintereinander mit der linken Maustaste.', render:()=>doubleClickTask(3,true) },
+    { skill:'RECHTSKLICK', icon:'☰', level:'BASIS', title:'Das Kontextmenü', text:'Begrüße das Alien mit einem Rechtsklick über sein Kontextmenü!', how:'Mit der rechten Maustaste öffnest du zu einem Objekt ein Kontextmenü. Dort findest du zusätzliche Informationen oder Aktionen.', render:()=>rightClickTask(false) },
+    { skill:'RECHTSKLICK', icon:'☰', level:'PROFI', title:'Das Kontextmenü', text:'Führe bei beiden Figuren die angezeigte Aktion über das Kontextmenü aus!', how:'Mit der rechten Maustaste öffnest du zu einem Objekt ein Kontextmenü. Dort findest du zusätzliche Informationen oder Aktionen.', render:()=>rightClickTask(true) },
+    { skill:'ZIEHEN', icon:'↔', level:'BASIS', title:'Ziehen', text:'Bewege die Kisten an die richtigen Plätze!', how:'Wie auf dem Smartphone oder Tablet kannst du Objekte durch die Gegend ziehen. Zeige auf das Objekt, halte die linke Maustaste gedrückt und bewege die Maus.', render:()=>dragTask(false) },
+    { skill:'ZIEHEN', icon:'↔', level:'PROFI', title:'Ziehen', text:'Bewege die kleinen Kisten an die richtigen Plätze!', how:'Wie auf dem Smartphone oder Tablet kannst du Objekte durch die Gegend ziehen. Zeige auf das Objekt, halte die linke Maustaste gedrückt und bewege die Maus.', render:()=>dragTask(true) },
+    { skill:'SCROLLRAD', icon:'↕', level:'BASIS', title:'Das Mausrad', text:'Scrolle im Logbuch ganz nach unten!', how:'Mit dem Mausrad zwischen den beiden Maustasten kannst du scrollen. Bewege dazu das Rad nach oben oder unten.', render:()=>scrollTask(false) },
+    { skill:'SCROLLRAD', icon:'↕', level:'PROFI', title:'Das Mausrad', text:'Scrolle im Register zu „Station VEGA“ und klicke sie an!', how:'Mit dem Mausrad zwischen den beiden Maustasten kannst du scrollen. Bewege dazu das Rad nach oben oder unten.', render:()=>scrollTask(true) },
+    { skill:'PRÄZISION', icon:'⌁', level:'BASIS', title:'Präzision', text:'Klicke auf START, halte die Maustaste gedrückt und führe den Zeiger bis zum ZIEL, ohne den Korridor zu verlassen!', how:'Die Maus genau zu bewegen, ist gar nicht so einfach.', render:()=>wireTask(false) },
+    { skill:'PRÄZISION', icon:'⌁', level:'PROFI', title:'Präzision', text:'Führe den Zeiger durch den schmalen Korridor von START bis ZIEL!', how:'Die Maus genau zu bewegen, ist gar nicht so einfach. Halte die linke Maustaste auf dem gesamten Weg gedrückt.', render:()=>wireTask(true) },
+    { skill:'ABSCHLUSS', icon:'★', level:'FINALE', title:'Abschluss', text:'Löse 7 kurze Mausaufgaben!', how:'Jetzt kommen alle Mausübungen nacheinander.', render:mixedMouseTask }
   ],
   keyboard: [
-    { skill:'KLEINBUCHSTABEN', icon:'a', level:'BASIS', title:'Kleinbuchstaben', text:'Tippe die Kleinbuchstaben, um das Sternentor zu laden.', how:'Drücke die angezeigten Buchstabentasten ohne Shift. Der jeweils nächste Buchstabe leuchtet blau.', location:'Buchstaben liegen im großen mittleren Bereich der Tastatur.', render:()=>sequenceTask(['n','e','b','e','l','s','t','e','r','n'],'Nur Kleinbuchstaben') },
-    { skill:'GROSSBUCHSTABEN', icon:'⇧', level:'BASIS', title:'Shift ⇧ für Großbuchstaben', text:'Halte Shift und tippe die Großbuchstaben. Caps Lock zählt nicht.', how:'Halte Shift ⇧ mit einer Hand gedrückt und tippe gleichzeitig den Buchstaben mit der anderen.', location:'Shift ⇧ liegt links über Strg und rechts unter Enter.', render:()=>sequenceTask(['R','A','K','E','T','E'],'Shift ⇧ + Buchstabe',true) },
-    { skill:'ZAHLEN', icon:'7', level:'BASIS', title:'Zahlentasten', text:'Gib den Navigationscode ein.', how:'Tippe die angezeigten Ziffern der Reihe nach.', location:'Die Zahlenreihe liegt ganz oben über den Buchstaben.', render:()=>sequenceTask(['4','7','2','9','0','3'],'Zahlenreihe oben') },
-    { skill:'SONDERZEICHEN', icon:'#', level:'BASIS', title:'Sonderzeichen', text:'Repariere die Antenne mit den angezeigten Sonderzeichen.', how:'Einige Zeichen brauchen Shift ⇧, andere AltGr. Entscheidend ist das richtige Zeichen auf dem Bildschirm.', location:'Sonderzeichen stehen meist auf Zahlen- und Randtasten.', render:()=>sequenceTask(['!','?','-','_','+','#'],'Bei Bedarf Shift ⇧ oder AltGr verwenden') },
-    { skill:'BACKSPACE · SHIFT · ENTER', icon:'⌫', level:'BASIS', title:'Korrigieren und bestätigen', text:'Entferne das falsche x, ergänze ein ! und bestätige mit Enter.', how:'Backspace ⌫ löscht links vom Cursor. Shift ⇧ erzeugt das !. Enter ↵ bestätigt die fertige Eingabe.', location:'Backspace ⌫: oben rechts. Enter ↵: rechts mittig. Shift ⇧: unten links und rechts.', render:correctionTask },
-    { skill:'DAS @-ZEICHEN', icon:'@', level:'BASIS', title:'Das @-Zeichen', text:'Tippe die Funkadresse vollständig ein.', how:'Auf einer deutschen Tastatur entsteht @ meistens mit AltGr und Q gleichzeitig.', location:'AltGr liegt rechts neben der Leertaste; Q links oben im Buchstabenfeld.', render:addressTask },
-    { skill:'PFEILTASTEN', icon:'←', level:'BASIS', title:'Pfeiltasten', text:'Steuere dein Schiff mit den Pfeiltasten zum grünen Ziel.', how:'Jede Pfeiltaste bewegt das Schiff in die Richtung ihres Symbols: ← ↑ ↓ →.', location:'Die vier Pfeiltasten liegen als eigener Block unten rechts.', render:arrowTask },
-    { skill:'ABSCHLUSSMISSION', icon:'★', level:'FINALE', title:'Alles in einer Mission', text:'Löse den gemischten Tastatur-Funkauftrag.', how:'Klein- und Großbuchstaben, Zahlen, Sonderzeichen, Backspace, Enter, @ und Pfeiltasten werden kombiniert.', location:'Achte auf die eingeblendeten Symbole und den nächsten Auftrag.', render:mixedKeyboardTask }
+    { skill:'KLEINBUCHSTABEN', icon:'a', level:'BASIS', title:'Kleinbuchstaben', text:'Tippe: nebelstern', how:'Drücke die angezeigten Buchstaben. Du findest sie in der Mitte der Tastatur. Der nächste Buchstabe ist blau markiert.', location:'Buchstaben: Mitte der Tastatur.', render:()=>sequenceTask(['n','e','b','e','l','s','t','e','r','n'],'Nur Kleinbuchstaben') },
+    { skill:'GROSSBUCHSTABEN', icon:'⇧', level:'BASIS', title:'Shift ⇧', text:'Tippe: RAKETE', how:'Mit Shift ⇧ schreibst du Großbuchstaben. Halte Shift gedrückt und tippe gleichzeitig den Buchstaben. Die Shift-Tasten liegen unten links und rechts.', render:()=>sequenceTask(['R','A','K','E','T','E'],'Shift ⇧ + Buchstabe','shift') },
+    { skill:'FESTSTELLTASTE', icon:'⇪', level:'BASIS', title:'Feststelltaste ⇪', text:'Schalte die Feststelltaste ein, tippe SATURN und schalte sie wieder aus.', how:'Mit der Feststelltaste ⇪ schreibst du mehrere Großbuchstaben. Sie liegt links über der Shift-Taste. Einmal drücken schaltet sie ein, noch einmal drücken schaltet sie aus.', render:capsLockTask },
+    { skill:'ZAHLEN', icon:'7', level:'BASIS', title:'Zahlen', text:'Tippe: 472903', how:'Die Zahlen stehen in der obersten Tastenreihe. Tippe 472903 von links nach rechts.', location:'Zahlenreihe: oben.', render:()=>sequenceTask(['4','7','2','9','0','3'],'Zahlenreihe oben') },
+    { skill:'SONDERZEICHEN', icon:'⇧', level:'BASIS', title:'Sonderzeichen mit Shift ⇧', text:'Tippe: ! ? _', how:'Halte Shift ⇧ gedrückt: ! liegt auf der 1, ? auf der ß-Taste und _ auf der Minus-Taste.', render:()=>sequenceTask(['!','?','_'],'Shift + 1 · Shift + ß · Shift + -','shift') },
+    { skill:'SONDERZEICHEN', icon:'Gr', level:'BASIS', title:'Sonderzeichen mit AltGr', text:'Tippe: @ € {', how:'AltGr liegt rechts neben der Leertaste. Halte AltGr gedrückt: @ liegt auf Q, € auf E und { auf 7.', render:()=>sequenceTask(['@','€','{'],'AltGr + Q · AltGr + E · AltGr + 7','altgr') },
+    { skill:'BACKSPACE · SHIFT · ENTER', icon:'⌫', level:'BASIS', title:'Backspace ⌫ und Enter ↵', text:'Ändere „Sternx“ in „Stern!“ und drücke Enter ↵.', how:'Backspace ⌫ oben rechts löscht das x. Shift ⇧ + 1 schreibt !. Enter ↵ rechts in der Mitte bestätigt die Eingabe.', location:'⌫ oben rechts · ↵ rechts · ⇧ unten.', render:correctionTask },
+    { skill:'@-ZEICHEN', icon:'@', level:'BASIS', title:'At-Zeichen @', text:'Tippe: nova@orbit.de', how:'Für @ hältst du AltGr rechts neben der Leertaste und drückst gleichzeitig Q links oben.', location:'AltGr: rechts neben Leertaste · Q: links oben.', render:addressTask },
+    { skill:'PFEILTASTEN', icon:'←', level:'BASIS', title:'Pfeiltasten ← ↑ ↓ →', text:'Steuere das Dreieck zum Stern.', how:'Die Pfeiltasten liegen unten rechts. Jede Taste bewegt das Dreieck in die Richtung ihres Pfeils.', location:'Pfeiltasten: unten rechts.', render:arrowTask },
+    { skill:'ABSCHLUSS', icon:'★', level:'FINALE', title:'Gemischte Aufgaben', text:'Korrigiere den Code. Folge danach dem Radar.', how:'Nutze Feststelltaste, Shift, AltGr, Backspace, Enter und danach die Pfeiltasten.', render:mixedKeyboardTask }
   ]
 };
+
+taskSets['mouse-basic'] = taskSets.mouse.filter(task => task.level !== 'PROFI');
+taskSets['mouse-pro'] = taskSets.mouse.filter(task => task.level !== 'BASIS');
+delete taskSets.mouse;
 
 function updateSoundButton() {
   $('#soundButton').setAttribute('aria-pressed', String(soundOn));
@@ -88,8 +88,8 @@ function showScreen(name) {
 function startMission(nextMode) {
   mode = nextMode;
   taskIndex = 0; attempts = 0; correct = 0; score = 0;
-  startedAt = Date.now(); pausedTotal = 0; pauseStarted = 0;
-  app.missionName.textContent = mode === 'mouse' ? 'MAUSMISSION' : 'TASTATURMISSION';
+  startedAt = Date.now();
+  app.missionName.textContent = mode === 'mouse-basic' ? 'MAUS · GRUNDLAGEN' : mode === 'mouse-pro' ? 'MAUS · PROFI' : 'TASTATUR';
   showScreen('game');
   clearInterval(timerId);
   timerId = setInterval(updateTimer, 250);
@@ -98,8 +98,7 @@ function startMission(nextMode) {
 }
 
 function updateTimer() {
-  const pausedNow = pauseStarted ? Date.now() - pauseStarted : 0;
-  const seconds = Math.floor((Date.now() - startedAt - pausedTotal - pausedNow) / 1000);
+  const seconds = Math.floor((Date.now() - startedAt) / 1000);
   app.timer.textContent = formatTime(seconds);
   if (seconds >= 300) finishMission(true);
 }
@@ -122,42 +121,13 @@ function renderTask() {
   resetField();
   const tasks = taskSets[mode];
   const task = tasks[taskIndex];
-  currentTask = task;
-  taskRendered = false;
-  app.skill.textContent = task.skill;
   app.instructionIcon.textContent = task.icon;
+  app.taskTitle.textContent = task.title;
+  app.taskExplanation.textContent = task.how;
   app.instruction.textContent = task.text;
-  app.howToSymbol.textContent = task.icon;
-  app.howToText.textContent = task.how;
   app.stepLabel.textContent = `${taskIndex + 1} / ${tasks.length}`;
   app.progress.style.width = `${(taskIndex / tasks.length) * 100}%`;
-  showBriefing(task, true);
-}
-
-function showBriefing(task, launchTask = false) {
-  app.field.querySelector('.briefing')?.remove();
-  if (!pauseStarted) pauseStarted = Date.now();
-  const overlay = document.createElement('div');
-  overlay.className = 'briefing';
-  const keyDetails = mode === 'keyboard'
-    ? `<div class="briefing-keys"><span class="keycap">${task.icon}</span><span>${task.location}</span></div>`
-    : `<div class="briefing-keys"><span class="mouse-mini">${task.icon}</span><span>${task.location}</span></div>`;
-  overlay.innerHTML = `
-    <div class="briefing-card" role="dialog" aria-modal="true" aria-labelledby="briefingTitle">
-      <div class="briefing-top"><span class="eyebrow">${task.level} · ${task.skill}</span><span class="briefing-step">${taskIndex + 1}/${taskSets[mode].length}</span></div>
-      <h3 id="briefingTitle">${task.title}</h3>
-      <p>${task.how}</p>
-      ${keyDetails}
-      <button class="primary-button briefing-start">${launchTask ? 'Verstanden – los' : 'Weiterüben'}</button>
-    </div>`;
-  app.field.append(overlay);
-  const start = overlay.querySelector('.briefing-start');
-  start.addEventListener('click', () => {
-    overlay.remove();
-    if (pauseStarted) { pausedTotal += Date.now() - pauseStarted; pauseStarted = 0; }
-    if (launchTask && !taskRendered) { taskRendered = true; task.render(); }
-  });
-  start.focus();
+  task.render();
 }
 
 function note(success, message = '') {
@@ -189,8 +159,7 @@ function completeTask(message) {
 function finishMission(timedOut) {
   if (!mode || app.game.classList.contains('hidden')) return;
   clearInterval(timerId); resetField();
-  const pausedNow = pauseStarted ? Date.now() - pauseStarted : 0;
-  const elapsed = Math.min(300, Math.floor((Date.now() - startedAt - pausedTotal - pausedNow) / 1000));
+  const elapsed = Math.min(300, Math.floor((Date.now() - startedAt) / 1000));
   const accuracy = attempts ? Math.round((correct / attempts) * 100) : 0;
   const completed = taskIndex >= taskSets[mode].length || (!timedOut && taskIndex === taskSets[mode].length - 1);
   if (elapsed < 240 && completed) score += 100;
@@ -198,8 +167,8 @@ function finishMission(timedOut) {
   const key = `space-input-best-${mode}`;
   const old = JSON.parse(localStorage.getItem(key) || 'null');
   if (!old || score > old.score) localStorage.setItem(key, JSON.stringify(result));
-  $('#resultTitle').textContent = timedOut ? 'Trainingszeit erreicht' : accuracy >= 90 ? 'Sternenstark!' : 'Mission geschafft!';
-  $('#resultText').textContent = timedOut ? 'Dein Fortschritt ist gespeichert. Beim nächsten Flug geht es weiter.' : `${mode === 'mouse' ? 'Maus' : 'Tastatur'}-Mission abgeschlossen.`;
+  $('#resultTitle').textContent = timedOut ? 'Fünf Minuten sind um' : 'Geschafft';
+  $('#resultText').textContent = timedOut ? 'Du kannst die Runde später fortsetzen.' : 'Training abgeschlossen.';
   $('#resultScore').textContent = score;
   $('#resultAccuracy').textContent = `${accuracy} %`;
   $('#resultTime').textContent = formatTime(elapsed);
@@ -208,11 +177,11 @@ function finishMission(timedOut) {
 }
 
 function goHome() {
-  clearInterval(timerId); resetField(); pauseStarted = 0; mode = null; showScreen('home'); renderBest();
+  clearInterval(timerId); resetField(); mode = null; showScreen('home'); renderBest();
 }
 
 function renderBest() {
-  const labels = { mouse: 'Maus', keyboard: 'Tastatur' };
+  const labels = { 'mouse-basic': 'Maus Basis', 'mouse-pro': 'Maus Profi', keyboard: 'Tastatur' };
   $('#bestRow').replaceChildren();
   Object.keys(labels).forEach(key => {
     const data = JSON.parse(localStorage.getItem(`space-input-best-${key}`) || 'null');
@@ -257,7 +226,7 @@ function hoverTask(hard = false) {
       if (targets.includes(name) && !planet.disabled) {
         planet.disabled = true; planet.style.opacity = '.22'; note(true);
         found++;
-        if (found === targets.length) completeTask(hard ? 'Beide Monde sicher über ihre Tooltips erkannt.' : 'Nebula gefunden – ruhiges Hovern aktiviert Tooltips.');
+        if (found === targets.length) completeTask(hard ? 'Luna und Titan gefunden.' : 'Nebula gefunden.');
       }
       else note(false, `Das ist ${name}. Suche weiter.`);
     });
@@ -277,7 +246,7 @@ function clickTask(total = 5, hard = false) {
     orb.addEventListener('click', () => { if (orb.disabled) return; orb.disabled = true; orb.classList.remove('drifting'); orb.style.opacity = '.18'; note(true, `${++hits} von ${total} aktiviert`); if (hits === total) completeTask('Alle Energiekugeln sind online.'); });
     app.field.append(orb);
   }
-  const miss = e => { if (e.target === app.field) note(false, 'Knapp daneben – direkt auf die Kugel klicken.'); };
+  const miss = e => { if (e.target === app.field) note(false, 'Nicht getroffen.'); };
   app.field.addEventListener('click', miss); cleanups.push(() => app.field.removeEventListener('click', miss));
 }
 
@@ -288,8 +257,8 @@ function doubleClickTask(total = 3, hard = false) {
     const crystal = document.createElement('button'); crystal.className = `space-object crystal ${hard ? 'small' : ''}`; crystal.textContent = '✦';
     crystal.style.left = `calc(${x}% - 42px)`; crystal.style.top = `calc(${y}% - 42px)`;
     crystal.setAttribute('aria-label', 'Kristall doppelklicken');
-    crystal.addEventListener('click', () => { if (!crystal.disabled) app.feedback.textContent = 'Das war ein einzelner Klick – zweimal schnell klicken.'; });
-    crystal.addEventListener('dblclick', e => { e.preventDefault(); if (crystal.disabled) return; crystal.disabled = true; crystal.style.opacity = '.2'; note(true, `${++hits} von ${total} geöffnet`); if (hits === total) completeTask('Perfekt – saubere Doppelklicks.'); });
+    crystal.addEventListener('click', () => { if (!crystal.disabled) app.feedback.textContent = 'Ein Klick erkannt. Klicke zweimal schnell.'; });
+    crystal.addEventListener('dblclick', e => { e.preventDefault(); if (crystal.disabled) return; crystal.disabled = true; crystal.style.opacity = '.2'; note(true, `${++hits} von ${total} geöffnet`); if (hits === total) completeTask('Doppelklick erkannt.'); });
     app.field.append(crystal);
   });
 }
@@ -321,16 +290,6 @@ function rightClickTask(hard = false) {
   });
 }
 
-function precisionTask(total = 5, hard = false) {
-  let hits = 0;
-  const target = document.createElement('button'); target.className = `space-object tiny-target ${hard ? 'micro' : ''}`; target.setAttribute('aria-label', 'Navigationspunkt');
-  const move = () => { const p = randomPosition(45, 35); target.style.left = `${p.left}px`; target.style.top = `${p.top}px`; };
-  target.addEventListener('click', e => { e.stopPropagation(); note(true, `${++hits} von ${total} getroffen`); if (hits === total) { target.remove(); completeTask('Navigation kalibriert – sehr präzise!'); } else move(); });
-  const miss = () => note(false, 'Daneben – nimm dir einen Moment zum Zielen.');
-  app.field.addEventListener('click', miss); cleanups.push(() => app.field.removeEventListener('click', miss));
-  move(); app.field.append(target);
-}
-
 function dragTask(hard = false) {
   const docks = hard
     ? [{ type:'cyan', left:'7%' }, { type:'purple', left:'43%' }, { type:'pink', right:'7%' }]
@@ -355,12 +314,12 @@ function scrollTask(hard = false) {
   const header=document.createElement('div');header.className='scroll-header';header.innerHTML='<span>◉ BORDCOMPUTER</span><span>SCROLLRAD ↕</span>';
   const panel=document.createElement('div');panel.className='scroll-console';panel.tabIndex=0;panel.setAttribute('aria-label',hard?'Sternenregister':'Bordlogbuch');
   let wheelSeen=false,done=false;
-  panel.addEventListener('wheel',()=>{wheelSeen=true;app.feedback.textContent='Scrollrad erkannt …';},{passive:true});
+  panel.addEventListener('wheel',()=>{wheelSeen=true;app.feedback.textContent='Scrollrad erkannt.';},{passive:true});
   if(!hard){
     const entries=['Startsystem geprüft','Antrieb bereit','Funkkanal geöffnet','Sternkarte geladen','Kurs berechnet','Meteoritenfeld passiert','Zielsystem erreicht'];
     entries.forEach((text,i)=>{const row=document.createElement('div');row.className='log-entry';row.innerHTML=`<b>0${i+1}</b><span>${text}</span>`;panel.append(row)});
     const finish=document.createElement('div');finish.className='scroll-finish';finish.innerHTML='<strong>✓ LOGBUCH VOLLSTÄNDIG</strong><span>Du hast das Ende erreicht.</span>';panel.append(finish);
-    panel.addEventListener('scroll',()=>{if(!done&&wheelSeen&&panel.scrollTop+panel.clientHeight>=panel.scrollHeight-16){done=true;note(true);completeTask('Bis zum Ende gescrollt – Scrollrad gemeistert.')}});
+    panel.addEventListener('scroll',()=>{if(!done&&wheelSeen&&panel.scrollTop+panel.clientHeight>=panel.scrollHeight-16){done=true;note(true);completeTask('Ende erreicht.')}});
   }else{
     const stations=['ALTAIR','SIRIUS','POLARIS','MIRA','DENEB','VEGA','RIGEL','ANTARES','CAPELLA'];
     stations.forEach((name,i)=>{const row=document.createElement('button');row.className=`station-row ${name==='VEGA'?'target-station':''}`;row.innerHTML=`<span>ST-${String(31+i).padStart(3,'0')}</span><strong>Station ${name}</strong><small>${(4.2+i*.7).toFixed(1)} LJ</small>`;row.addEventListener('click',()=>{if(!wheelSeen)return note(false,'Benutze zuerst das Scrollrad.');if(name==='VEGA'){note(true);completeTask('Station VEGA gefunden und ausgewählt.')}else note(false,`Das ist ${name}, gesucht ist VEGA.`)});panel.append(row)});
@@ -380,19 +339,27 @@ function wireTask(hard = false) {
   const distance=p=>Math.min(...path.slice(0,-1).map((a,i)=>segDist(p,a,path[i+1])));
   const deactivate=()=>{active=false;probe=null;canvas.classList.remove('wire-active');draw();};
   canvas.addEventListener('pointerdown',e=>{const p=point(e); if(Math.hypot(p[0]-path[0][0],p[1]-path[0][1])<35){active=true;probe=p;canvas.classList.add('wire-active');canvas.setPointerCapture(e.pointerId);draw();app.feedback.textContent='Impuls aktiv – der leuchtende Punkt ist jetzt dein Mauszeiger.';}else note(false,'Beginne im grünen START-Kreis.');});
-  canvas.addEventListener('pointermove',e=>{if(!active)return;const p=point(e);probe=p;draw();if(distance(p)>corridor){deactivate();note(false,'Kontakt! Zurück zu START.');}else if(Math.hypot(p[0]-path.at(-1)[0],p[1]-path.at(-1)[1])<34){deactivate();note(true);completeTask('Impuls angekommen – der Kurs war sauber!');}});
+  canvas.addEventListener('pointermove',e=>{if(!active)return;const p=point(e);probe=p;draw();if(distance(p)>corridor){deactivate();note(false,'Weg berührt. Starte neu.');}else if(Math.hypot(p[0]-path.at(-1)[0],p[1]-path.at(-1)[1])<34){deactivate();note(true);completeTask('Ziel erreicht.');}});
   canvas.addEventListener('pointerup',()=>{if(active){deactivate();note(false,'Zu früh losgelassen – halte bis zum Ziel.');}}); draw();
 }
 
 function mixedMouseTask() {
   let stage = 0;
-  const labels = ['Tooltip öffnen','Linksklick','Doppelklick','Rechtsklick','Genau klicken','Drag & Drop','Scrollrad','Heißer Draht'];
+  const labels = [
+    'Hovere über den Planeten',
+    'Klicke die Kugel an',
+    'Öffne den Kristall mit Doppelklick',
+    'Öffne das Kontextmenü und scanne das Alien',
+    'Ziehe die Kiste ins Ziel',
+    'Scrolle bis zum Ende',
+    'Führe den Zeiger durch den Korridor'
+  ];
   const base = () => {
     app.field.replaceChildren();
     app.field.oncontextmenu = null;
-    const status=document.createElement('div');status.className='mixed-status';status.textContent=`${stage+1}/8 · ${labels[stage]}`;app.field.append(status);
+    const status=document.createElement('div');status.className='mixed-status';status.textContent=`${stage+1}/7 · ${labels[stage]}`;app.field.append(status);
   };
-  const next = () => { stage++; if(stage<8) renderStage(); };
+  const next = () => { stage++; if(stage<7) renderStage(); };
   function renderStage() {
     base();
     if(stage===0){
@@ -406,13 +373,11 @@ function mixedMouseTask() {
       app.field.oncontextmenu=e=>e.preventDefault();const a=document.createElement('button');a.className='space-object alien compact';a.textContent='👾';a.style.left='calc(50% - 56px)';a.style.top='36%';
       a.addEventListener('contextmenu',e=>{e.preventDefault();const menu=document.createElement('div');menu.className='context-menu';menu.style.left='calc(50% + 25px)';menu.style.top='43%';['Begrüßen','Scannen'].forEach(x=>{const b=document.createElement('button');b.textContent=x;b.addEventListener('click',()=>{if(x==='Scannen'){note(true);next()}else note(false,'Wähle „Scannen“.')});menu.append(b)});app.field.append(menu)});app.field.append(a);
     } else if(stage===4){
-      const t=document.createElement('button');t.className='space-object tiny-target micro';t.style.left='calc(50% - 13px)';t.style.top='45%';t.addEventListener('click',()=>{note(true);next()});app.field.append(t);
-    } else if(stage===5){
       const dock=document.createElement('div');dock.className='dock cyan';dock.style.right='17%';dock.textContent='ZIEL';const box=document.createElement('div');box.className='cargo cyan';box.textContent='C1';box.style.left='20%';box.style.top='40%';let drag=false,dx=0,dy=0;
       box.addEventListener('pointerdown',e=>{drag=true;box.setPointerCapture(e.pointerId);const r=box.getBoundingClientRect();dx=e.clientX-r.left;dy=e.clientY-r.top});
       box.addEventListener('pointermove',e=>{if(!drag)return;const r=app.field.getBoundingClientRect();box.style.left=`${e.clientX-r.left-dx}px`;box.style.top=`${e.clientY-r.top-dy}px`});
       box.addEventListener('pointerup',()=>{drag=false;const a=box.getBoundingClientRect(),b=dock.getBoundingClientRect();if(a.left>b.left-5&&a.right<b.right+5&&a.top>b.top-5&&a.bottom<b.bottom+5){note(true);next()}else note(false,'Lege die Kiste vollständig im Ziel ab.')});app.field.append(dock,box);
-    } else if(stage===6){
+    } else if(stage===5){
       const scroller=document.createElement('div');scroller.className='mini-scroller';scroller.tabIndex=0;let wheel=false;
       scroller.innerHTML='<div>START</div><div>↓ weiter scrollen ↓</div><div>Satellit 01</div><div>Satellit 02</div><div>Satellit 03</div><div class="mini-scroll-goal">✓ SCROLL-ZIEL</div>';
       scroller.addEventListener('wheel',()=>wheel=true,{passive:true});scroller.addEventListener('scroll',()=>{if(wheel&&scroller.scrollTop+scroller.clientHeight>=scroller.scrollHeight-8){note(true);next()}});app.field.append(scroller);scroller.focus();
@@ -424,44 +389,82 @@ function mixedMouseTask() {
 }
 
 function mixedKeyboardTask() {
-  const target='orbitStern7@nova!';
+  const target='orbitSTERN7@nova!';
   const wrap=document.createElement('div');wrap.className='key-display';const label=document.createElement('div');label.className='target-keys final-code';label.textContent=target;
   const input=document.createElement('input');input.className='type-input';input.value='orbitx';input.setAttribute('aria-label','Gemischten Code korrigieren und eingeben');
-  const help=document.createElement('div');help.className='keyboard-hint';help.innerHTML='1. <span class="keycap">⌫</span> x löschen · 2. Code ergänzen · 3. <span class="keycap">Enter ↵</span>';
-  wrap.append(label,input,help);app.field.append(wrap);input.focus();let backspace=false,shiftS=false,shiftBang=false;
+  const help=document.createElement('div');help.className='keyboard-hint';help.innerHTML='<span class="keycap">⌫</span> x löschen · <span class="keycap">⇪</span> STERN · 7 · <span class="keycap">AltGr</span> + Q · nova · <span class="keycap">Shift</span> + 1 · <span class="keycap">Enter ↵</span>';
+  wrap.append(label,input,help);app.field.append(wrap);input.focus();let backspace=false,capsOn=false,capsUsed=false,capsOff=false,capsLetters=0,altGrAt=false,shiftBang=false;
   input.addEventListener('keydown',e=>{
+    if(e.key==='CapsLock'){
+      capsOn=!capsOn;
+      if(capsOn)capsUsed=true;
+      else if(capsUsed)capsOff=true;
+      return;
+    }
     if(e.key==='Backspace'&&input.value==='orbitx')backspace=true;
-    if(e.key==='S'&&e.shiftKey)shiftS=true;
+    if(capsOn&&!e.shiftKey&&/^[a-z]$/i.test(e.key))capsLetters++;
+    if(e.key==='@'&&usesAltGr(e))altGrAt=true;
     if(e.key==='!'&&e.shiftKey)shiftBang=true;
     if(e.key==='Enter'){
       e.preventDefault();
-      if(input.value===target&&backspace&&shiftS&&shiftBang){note(true,'Code bestätigt. Jetzt folgt die Radar-Navigation.');app.field.replaceChildren();setTimeout(()=>finalArrowTask(),250)}
-      else note(false,'Prüfe Code, Shift, Backspace und Enter.');
+      if(input.value===target&&backspace&&capsUsed&&capsOff&&capsLetters>=5&&altGrAt&&shiftBang){note(true,'Code bestätigt. Jetzt folgt die Radar-Navigation.');app.field.replaceChildren();setTimeout(()=>finalArrowTask(),250)}
+      else note(false,'Prüfe Feststelltaste, Shift, AltGr, Backspace und Enter.');
     }
   });
 }
 
-function sequenceTask(sequence, hint, requireShift=false) {
+function usesAltGr(event) {
+  return Boolean(event.getModifierState?.('AltGraph') || (event.ctrlKey && event.altKey));
+}
+
+function sequenceTask(sequence, hint, requiredModifier='') {
   const wrap=document.createElement('div');wrap.className='key-display';const display=document.createElement('div');display.className='target-keys';const help=document.createElement('div');help.className='keyboard-hint';help.textContent=hint;wrap.append(display,help);app.field.append(wrap);let index=0;
   const paint=()=>{display.innerHTML=sequence.map((c,i)=>`<span class="${i<index?'done':i===index?'current':''}">${c}</span>`).join('');};paint();
-  const key=e=>{if(taskFinished)return;if(['Shift','AltGraph','Control','Alt'].includes(e.key))return;e.preventDefault();const expected=sequence[index];const valid=e.key===expected&&(!requireShift||e.shiftKey)&&!(requireShift&&e.getModifierState?.('CapsLock'));if(valid){note(true);index++;paint();if(index===sequence.length)completeTask('Code vollständig – alle Zeichen erkannt.');}else note(false,requireShift?'Halte Shift und tippe den markierten Buchstaben.':`Gesucht ist „${expected}“.`);};
+  const key=e=>{if(taskFinished)return;if(['Shift','AltGraph','Control','Alt'].includes(e.key))return;e.preventDefault();const expected=sequence[index];const modifierOkay=requiredModifier==='shift'?e.shiftKey&&!e.getModifierState?.('CapsLock'):requiredModifier==='altgr'?usesAltGr(e):true;const valid=e.key===expected&&modifierOkay;if(valid){note(true);index++;paint();if(index===sequence.length)completeTask('Eingabe richtig.');}else{const message=requiredModifier==='shift'?'Halte Shift und tippe das markierte Zeichen.':requiredModifier==='altgr'?'Halte AltGr und tippe das markierte Zeichen.':`Gesucht ist „${expected}“.`;note(false,message);}};
+  window.addEventListener('keydown',key);cleanups.push(()=>window.removeEventListener('keydown',key));
+}
+
+function capsLockTask(){
+  const sequence=[...'SATURN'];
+  const wrap=document.createElement('div');wrap.className='key-display';
+  const display=document.createElement('div');display.className='target-keys';
+  const help=document.createElement('div');help.className='keyboard-hint';help.innerHTML='<span class="keycap">⇪ Feststelltaste</span> einschalten';
+  wrap.append(display,help);app.field.append(wrap);
+  let index=0,capsOn=false,wasEnabled=false;
+  const paint=()=>{display.innerHTML=sequence.map((c,i)=>`<span class="${i<index?'done':i===index?'current':''}">${c}</span>`).join('');};paint();
+  const key=e=>{
+    if(taskFinished)return;
+    if(e.key==='CapsLock'){
+      capsOn=!capsOn;
+      if(capsOn){wasEnabled=true;help.textContent='Feststelltaste ist an. Tippe SATURN.';note(true,'Feststelltaste eingeschaltet.');}
+      else if(wasEnabled&&index===sequence.length){note(true);completeTask('Feststelltaste ausgeschaltet.');}
+      else{note(false,'Schalte die Feststelltaste wieder ein.');}
+      return;
+    }
+    if(!capsOn)return note(false,'Schalte zuerst die Feststelltaste ein.');
+    if(e.shiftKey)return note(false,'Tippe ohne Shift.');
+    e.preventDefault();
+    const expected=sequence[index];
+    if(e.key.toUpperCase()===expected){note(true);index++;paint();if(index===sequence.length)help.innerHTML='<span class="keycap">⇪ Feststelltaste</span> wieder ausschalten';}
+    else note(false,`Gesucht ist „${expected}“.`);
+  };
   window.addEventListener('keydown',key);cleanups.push(()=>window.removeEventListener('keydown',key));
 }
 
 function correctionTask(){
   const wrap=document.createElement('div');wrap.className='key-display';const label=document.createElement('div');label.className='target-keys';label.textContent='Stern!';const input=document.createElement('input');input.className='type-input';input.value='Sternx';input.setAttribute('aria-label','Korrigiere Sternx zu Stern! und bestätige mit Enter');const help=document.createElement('div');help.className='keyboard-hint';help.innerHTML='<span class="keycap">Backspace</span> dann <span class="keycap">Shift</span> + <span class="keycap">1</span> und <span class="keycap">Enter</span>';wrap.append(label,input,help);app.field.append(wrap);input.focus();let backspaceUsed=false,shiftUsed=false;
-  input.addEventListener('keydown',e=>{if(e.key==='Backspace'&&input.value==='Sternx'){backspaceUsed=true;note(true,'Fehler entfernt – jetzt das Ausrufezeichen.');}else if(e.key==='!'&&e.shiftKey){shiftUsed=true;}else if(e.key==='Enter'){e.preventDefault();if(input.value==='Stern!'&&backspaceUsed&&shiftUsed){note(true);completeTask('Korrigiert und bestätigt – perfekte Tastenkombination.');}else note(false,'Der fertige Code muss „Stern!“ lauten.');}});
+  input.addEventListener('keydown',e=>{if(e.key==='Backspace'&&input.value==='Sternx'){backspaceUsed=true;note(true,'x gelöscht. Tippe jetzt !');}else if(e.key==='!'&&e.shiftKey){shiftUsed=true;}else if(e.key==='Enter'){e.preventDefault();if(input.value==='Stern!'&&backspaceUsed&&shiftUsed){note(true);completeTask('Eingabe bestätigt.');}else note(false,'Der Text muss „Stern!“ lauten.');}});
 }
 
 function addressTask(){
   const target='nova@orbit.de';const wrap=document.createElement('div');wrap.className='key-display';const label=document.createElement('div');label.className='target-keys';label.textContent=target;const input=document.createElement('input');input.className='type-input';input.autocomplete='off';input.spellcheck=false;input.setAttribute('aria-label','Funkadresse eingeben');const help=document.createElement('div');help.className='keyboard-hint';help.innerHTML='Deutsche Tastatur: meist <span class="keycap">AltGr</span> + <span class="keycap">Q</span>';wrap.append(label,input,help);app.field.append(wrap);input.focus();let previous='';
-  input.addEventListener('input',()=>{if(input.value===target){note(true);completeTask('Funkadresse verbunden – das @ wurde erkannt.');return;}if(target.startsWith(input.value)){if(input.value.length>previous.length)note(true,'Weiter so …');}else{note(false,'Das Zeichen passt noch nicht. Mit Backspace kannst du korrigieren.');}previous=input.value;});
+  input.addEventListener('input',()=>{if(input.value===target){note(true);completeTask('Adresse richtig.');return;}if(target.startsWith(input.value)){if(input.value.length>previous.length)note(true,'Richtig.');}else{note(false,'Falsches Zeichen. Mit Backspace korrigieren.');}previous=input.value;});
 }
 
 function arrowTask(){
   const wrap=document.createElement('div');wrap.className='key-display';const grid=document.createElement('div');grid.className='arrow-grid';const help=document.createElement('div');help.className='keyboard-hint';help.innerHTML='<span class="keycap">←</span><span class="keycap">↑</span><span class="keycap">↓</span><span class="keycap">→</span>';wrap.append(grid,help);app.field.append(wrap);let ship={x:0,y:3};const goal={x:4,y:0};const blocks=new Set(['2,1','2,2','2,3']);
   const paint=()=>{grid.replaceChildren();for(let y=0;y<4;y++)for(let x=0;x<5;x++){const cell=document.createElement('div');cell.className='grid-cell';if(blocks.has(`${x},${y}`))cell.textContent='◆';if(x===goal.x&&y===goal.y){cell.classList.add('goal');cell.textContent='★';}if(x===ship.x&&y===ship.y){cell.classList.add('ship');cell.textContent='▲';}grid.append(cell);}};paint();
-  const key=e=>{const moves={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};if(!moves[e.key]||taskFinished)return;e.preventDefault();const [dx,dy]=moves[e.key],nx=ship.x+dx,ny=ship.y+dy;if(nx<0||nx>4||ny<0||ny>3||blocks.has(`${nx},${ny}`)){note(false,'Dort ist der Weg versperrt.');return;}ship={x:nx,y:ny};note(true);paint();if(nx===goal.x&&ny===goal.y)completeTask('Sicher gelandet – Pfeiltasten gemeistert!');};window.addEventListener('keydown',key);cleanups.push(()=>window.removeEventListener('keydown',key));
+  const key=e=>{const moves={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};if(!moves[e.key]||taskFinished)return;e.preventDefault();const [dx,dy]=moves[e.key],nx=ship.x+dx,ny=ship.y+dy;if(nx<0||nx>4||ny<0||ny>3||blocks.has(`${nx},${ny}`)){note(false,'Weg versperrt.');return;}ship={x:nx,y:ny};note(true);paint();if(nx===goal.x&&ny===goal.y)completeTask('Ziel erreicht.');};window.addEventListener('keydown',key);cleanups.push(()=>window.removeEventListener('keydown',key));
 }
 
 function finalArrowTask(){
@@ -481,12 +484,11 @@ function finalArrowTask(){
   const prompt=document.createElement('div');prompt.className='radar-prompt';wrap.append(counter,radar,prompt);app.field.append(wrap);
   const beacon=radar.querySelector('.radar-beacon');
   const paint=()=>{const d=directions[index];counter.textContent=`RADAR-PUNKT ${index+1} / ${directions.length}`;beacon.className=`radar-beacon ${d.className}`;prompt.innerHTML=`Fliege zum Signal <span class="keycap">${d.symbol}</span> ${d.name}`;};
-  const key=e=>{if(taskFinished)return;const d=directions[index];if(!e.key.startsWith('Arrow'))return;e.preventDefault();if(e.key===d.key){note(true);index++;if(index===directions.length){completeTask('Radarroute abgeschlossen – alle Pfeilrichtungen sicher erkannt.')}else paint()}else note(false,`Das Signal liegt ${d.name}: ${d.symbol}`);};
+  const key=e=>{if(taskFinished)return;const d=directions[index];if(!e.key.startsWith('Arrow'))return;e.preventDefault();if(e.key===d.key){note(true);index++;if(index===directions.length){completeTask('Radarfolge abgeschlossen.')}else paint()}else note(false,`Das Signal liegt ${d.name}: ${d.symbol}`);};
   window.addEventListener('keydown',key);cleanups.push(()=>window.removeEventListener('keydown',key));paint();
 }
 
 document.querySelectorAll('[data-start]').forEach(button => button.addEventListener('click', () => startMission(button.dataset.start)));
 $('#soundButton').addEventListener('click', () => { soundOn=!soundOn;localStorage.setItem('space-input-sound',soundOn?'on':'off');updateSoundButton();tone(); });
-$('#helpButton').addEventListener('click', () => { if (currentTask) showBriefing(currentTask, false); });
 $('#homeButton').addEventListener('click', goHome);$('#exitButton').addEventListener('click', goHome);$('#resultHomeButton').addEventListener('click', goHome);$('#replayButton').addEventListener('click',()=>startMission(mode));
 updateSoundButton();renderBest();

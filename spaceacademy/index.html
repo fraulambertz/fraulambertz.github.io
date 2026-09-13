@@ -13,7 +13,7 @@
   <header class="topbar">
     <button class="brand" id="homeButton" aria-label="Zur Startseite">
       <span class="brand-mark">S</span>
-      <span><strong>SPACE INPUT</strong><small>ACADEMY</small></span>
+      <span><strong>MAUS &amp; TASTATUR</strong><small>TRAINING</small></span>
     </button>
     <button class="sound-button" id="soundButton" aria-pressed="false">
       <span id="soundIcon">♪</span><span id="soundLabel">Ton an</span>
@@ -23,25 +23,21 @@
   <main id="app" tabindex="-1">
     <section class="screen home-screen" id="homeScreen">
       <div class="mission-copy">
-        <span class="eyebrow">Willkommen, Kadett</span>
-        <h1>Mach deine Hände<br><em>weltraumfit.</em></h1>
-        <p>Zwei kurze Missionen. Jede dauert weniger als fünf Minuten.</p>
+        <h1>Was möchtest du üben?</h1>
         <div class="best-row" id="bestRow"></div>
       </div>
       <div class="mission-grid">
-        <button class="mission-card mouse-card" data-start="mouse">
-          <span class="card-number">MISSION 01</span>
-          <span class="orbit-icon"><span>↖</span></span>
-          <strong>Maustraining</strong>
-          <small>8 Techniken · je 2 Level + Finale</small>
-          <span class="launch">Mission starten <b>→</b></span>
+        <button class="mission-card mouse-card" data-start="mouse-basic" aria-label="Maustraining Anfänger">
+          <span class="orbit-icon" aria-hidden="true"><span>↖</span></span>
+          <strong>Maustraining Anfänger</strong>
         </button>
-        <button class="mission-card keyboard-card" data-start="keyboard">
-          <span class="card-number">MISSION 02</span>
-          <span class="key-icon">A</span>
+        <button class="mission-card mouse-card pro-card" data-start="mouse-pro" aria-label="Maustraining Fortgeschrittene">
+          <span class="orbit-icon" aria-hidden="true"><span>⊙</span></span>
+          <strong>Maustraining Fortgeschrittene</strong>
+        </button>
+        <button class="mission-card keyboard-card" data-start="keyboard" aria-label="Tastaturtraining">
+          <span class="key-icon" aria-hidden="true">A</span>
           <strong>Tastaturtraining</strong>
-          <small>7 Techniken + Abschlussmission</small>
-          <span class="launch">Mission starten <b>→</b></span>
         </button>
       </div>
       <p class="desktop-note">Für Computer mit Maus oder Touchpad und deutscher Tastatur</p>
@@ -59,11 +55,9 @@
       <div class="instruction-panel">
         <span class="instruction-icon" id="instructionIcon">↖</span>
         <div class="instruction-copy">
-          <span class="eyebrow" id="skillLabel">AUFGABE</span>
-          <h2 id="instruction">Bereit?</h2>
-          <button class="howto-button" id="helpButton" aria-label="Erklärung erneut öffnen">
-            <span id="howToSymbol">ⓘ</span><span id="howToText">So geht's</span>
-          </button>
+          <h2 id="taskTitle">Bereit?</h2>
+          <p class="task-explanation" id="taskExplanation"></p>
+          <p class="task-command" id="instruction"></p>
         </div>
       </div>
       <div class="playfield" id="playfield"></div>
@@ -82,7 +76,7 @@
       </div>
       <div class="result-actions">
         <button class="primary-button" id="replayButton">Noch einmal</button>
-        <button class="secondary-button" id="resultHomeButton">Andere Mission</button>
+        <button class="secondary-button" id="resultHomeButton">Anderes Training</button>
       </div>
     </section>
   </main>
